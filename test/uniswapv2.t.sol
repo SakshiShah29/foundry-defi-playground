@@ -3,19 +3,43 @@
 pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {WETH, DAI, MKR, UNISWAP_V2_ROUTER_02} from "../src/Constants.sol";
+import {
+    WETH,
+    DAI,
+    MKR,
+    UNISWAP_V2_ROUTER_02,
+    UNISWAP_V2_FACTORY
+} from "../src/Constants.sol";
 import {
     IUniswapV2Router02
 } from "../lib/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import {
+    IUniswapV2Factory
+} from "../lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import {
+    IUniswapV2Pair
+} from "../lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import {IWETH} from "../src/interfaces/IWETH.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {TestToken} from "../src/TestToken.sol";
 
 contract UniswapV2SwapAmountsTest is Test {
     IERC20 private constant weth = IERC20(WETH);
     IERC20 private constant dai = IERC20(DAI);
     IERC20 private constant mkr = IERC20(MKR);
+    address private constant user = address(1);
     IUniswapV2Router02 private constant router =
         IUniswapV2Router02(UNISWAP_V2_ROUTER_02);
+    IUniswapV2Factory private constant factory =
+        IUniswapV2Factory(UNISWAP_V2_FACTORY);
+
+    function setUp() public {
+        deal(user, 100 * 1e18);
+        vm.startPrank(user);
+        IWETH(WETH).deposit{value: 10 * 1e18}();
+        weth.approve(address(router), type(uint256).max);
+        vm.stopPrank();
+    }
 
     function test_getAmountsOut() public {
         // getAmountsOut(uint amountIn, address[] memory path)
@@ -55,5 +79,92 @@ contract UniswapV2SwapAmountsTest is Test {
         //   WETH: 40755611043506
         //   DAI: 137979305729246508
         //   MKR: 100000000000000
+    }
+
+    function test_swapExactTokensForTokens() public {
+        //     //   function swapExactTokensForTokens(
+        //     uint amountIn,
+        //     uint amountOutMin,
+        //     address[] calldata path,
+        //     address to,
+        //     uint deadline
+        // )
+        // returns (uint[] memory amounts)
+        address[] memory path = new address[](3);
+        path[0] = WETH;
+        path[1] = DAI;
+        path[2] = MKR;
+
+        uint256 amountIn = 1e18;
+        uint256 amountOutMin = 1;
+
+        vm.prank(user);
+        uint256[] memory amounts = router.swapExactTokensForTokens(
+            amountIn,
+            amountOutMin,
+            path,
+            address(user),
+            block.timestamp
+        );
+        console.log("WETH:", amounts[0]);
+        console.log("DAI:", amounts[1]);
+        console.log("MKR:", amounts[2]);
+        assertGe(
+            mkr.balanceOf(user),
+            amountOutMin,
+            "Did not receive minimum amount of MKR"
+        );
+    }
+
+    function test_swapTokensForExactTokens() public {
+        //   function swapTokensForExactTokens(
+        //         uint amountOut,
+        //         uint amountInMax,
+        //         address[] calldata path,
+        //         address to,
+        //         uint deadline
+        // )
+        // returns (uint[] memory amounts)
+        deal(address(mkr), user, 0);
+        address[] memory path = new address[](3);
+        path[0] = WETH;
+        path[1] = DAI;
+        path[2] = MKR;
+
+        uint256 amountOut = 1e16;
+        uint256 amountInMax = 1e18;
+
+        vm.prank(user);
+        uint256[] memory amounts = router.swapTokensForExactTokens(
+            amountOut,
+            amountInMax,
+            path,
+            address(user),
+            block.timestamp
+        );
+        console.log("WETH:", amounts[0]);
+        console.log("DAI:", amounts[1]);
+        console.log("MKR:", amounts[2]);
+        assertEq(
+            mkr.balanceOf(user),
+            amountOut,
+            "Did not receive exact amount of MKR"
+        );
+    }
+
+    function test_createPair() public {
+        TestToken token = new TestToken();
+
+        address pair = factory.createPair(address(token), WETH);
+
+        address token0 = IUniswapV2Pair(pair).token0();
+        address token1 = IUniswapV2Pair(pair).token1();
+        if (address(token) < WETH) {
+            assertEq(token0, address(token), "Token0 address mismatch");
+            assertEq(token1, WETH, "Token1 address mismatch");
+        } else {
+            assertEq(token0, WETH, "Token0 address mismatch");
+            assertEq(token1, address(token), "Token1 address mismatch");
+        }
     }
 }
