@@ -8,7 +8,8 @@ import {
     DAI,
     MKR,
     UNISWAP_V2_ROUTER_02,
-    UNISWAP_V2_FACTORY
+    UNISWAP_V2_FACTORY,
+    UNISWAP_V2_PAIR_DAI_WETH
 } from "../src/Constants.sol";
 import {
     IUniswapV2Router02
@@ -33,11 +34,20 @@ contract UniswapV2SwapAmountsTest is Test {
     IUniswapV2Factory private constant factory =
         IUniswapV2Factory(UNISWAP_V2_FACTORY);
 
+    IUniswapV2Pair private constant pair =
+        IUniswapV2Pair(UNISWAP_V2_PAIR_DAI_WETH);
+
     function setUp() public {
-        deal(user, 100 * 1e18);
+        deal(user, 200 * 1e18);
         vm.startPrank(user);
-        IWETH(WETH).deposit{value: 10 * 1e18}();
+        IWETH(WETH).deposit{value: 100 * 1e18}();
         weth.approve(address(router), type(uint256).max);
+        vm.stopPrank();
+
+        //Fund Dai to the user
+        deal(DAI, user, 1000000 * 1e18); //1 million DAI
+        vm.startPrank(user);
+        dai.approve(address(router), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -166,5 +176,41 @@ contract UniswapV2SwapAmountsTest is Test {
             assertEq(token0, WETH, "Token0 address mismatch");
             assertEq(token1, address(token), "Token1 address mismatch");
         }
+    }
+
+    function test_addLiquidity() public {
+        //    function addLiquidity(
+        //     address tokenA,
+        //     address tokenB,
+        //     uint amountADesired,
+        //     uint amountBDesired,
+        //     uint amountAMin,
+        //     uint amountBMin,
+        //     address to,
+        //     uint deadline
+        // ) external virtual override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity)
+        //DAI/WETH PAIR
+        //Current funds of tokens as in setUp functions is 100 DAI and 10 WETH
+        uint256 amountADesired = 1e6 * 1e18; //1,000,000 DAI
+        uint256 amountBDesired = 100 * 1e18; //100 WETH
+        uint256 amountAMin = 1;
+        uint256 amountBMin = 1;
+
+        vm.prank(user);
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
+            .addLiquidity(
+                DAI,
+                WETH,
+                amountADesired,
+                amountBDesired,
+                amountAMin,
+                amountBMin,
+                user,
+                block.timestamp
+            );
+        console.log("Amount A (DAI):", amountA);
+        console.log("Amount B (WETH):", amountB);
+        console.log("Liquidity (LP tokens):", liquidity);
+        assertGt(pair.balanceOf(user), 0, "LP > 0");
     }
 }
