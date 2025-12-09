@@ -23,6 +23,7 @@ import {
 import {IWETH} from "../src/interfaces/IWETH.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {TestToken} from "../src/TestToken.sol";
+import {UniswapV2FlashSwap} from "./../src/uniswap-v2/UniswapV2FlashSwap.sol";
 
 contract UniswapV2SwapAmountsTest is Test {
     IERC20 private constant weth = IERC20(WETH);
@@ -36,9 +37,11 @@ contract UniswapV2SwapAmountsTest is Test {
 
     IUniswapV2Pair private constant pair =
         IUniswapV2Pair(UNISWAP_V2_PAIR_DAI_WETH);
+          UniswapV2FlashSwap private flashSwap;
 
     function setUp() public {
-        deal(user, 200 * 1e18);
+        flashSwap = new UniswapV2FlashSwap(UNISWAP_V2_PAIR_DAI_WETH);
+        deal(user, 1000 * 1e18);
         vm.startPrank(user);
         IWETH(WETH).deposit{value: 100 * 1e18}();
         weth.approve(address(router), type(uint256).max);
@@ -252,5 +255,17 @@ contract UniswapV2SwapAmountsTest is Test {
         vm.stopPrank();
 
         assertEq(pair.balanceOf(user), 0, "LP = 0");
+    }
+
+    function test_flashSwap() public {
+        uint256 dai0 = dai.balanceOf(UNISWAP_V2_PAIR_DAI_WETH);
+        vm.startPrank(user);
+        dai.approve(address(flashSwap), type(uint256).max);
+        flashSwap.flashSwap(DAI, 1e4 * 1e18);
+        vm.stopPrank();
+        uint256 dai1 = dai.balanceOf(UNISWAP_V2_PAIR_DAI_WETH);
+
+        console.log("DAI fee", dai1 - dai0);
+        assertGe(dai1, dai0, "DAI balance of pair");
     }
 }
