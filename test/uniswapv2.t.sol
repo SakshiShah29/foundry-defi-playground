@@ -213,4 +213,44 @@ contract UniswapV2SwapAmountsTest is Test {
         console.log("Liquidity (LP tokens):", liquidity);
         assertGt(pair.balanceOf(user), 0, "LP > 0");
     }
+
+    function test_removeLiquidity() public {
+        vm.startPrank(user);
+        (, , uint256 liquidity) = router.addLiquidity({
+            tokenA: DAI,
+            tokenB: WETH,
+            amountADesired: 1000000 * 1e18,
+            amountBDesired: 100 * 1e18,
+            amountAMin: 1,
+            amountBMin: 1,
+            to: user,
+            deadline: block.timestamp
+        });
+        pair.approve(address(router), liquidity);
+        //  function removeLiquidity(
+        //         address tokenA,
+        //         address tokenB,
+        //         uint liquidity,
+        //         uint amountAMin,
+        //         uint amountBMin,
+        //         address to,
+        //         uint deadline
+        //     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB)
+
+        (uint256 amountA, uint256 amountB) = router.removeLiquidity({
+            tokenA: WETH,
+            tokenB: DAI,
+            liquidity: liquidity,
+            amountAMin: 1,
+            amountBMin: 1,
+            to: user,
+            deadline: block.timestamp
+        });
+        console.log("Removed Amount A:", amountA);
+        console.log("Removed Amount B:", amountB);
+
+        vm.stopPrank();
+
+        assertEq(pair.balanceOf(user), 0, "LP = 0");
+    }
 }
