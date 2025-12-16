@@ -10,21 +10,21 @@ import {
     UNISWAP_V2_ROUTER_02,
     UNISWAP_V2_FACTORY,
     UNISWAP_V2_PAIR_DAI_WETH
-} from "../src/Constants.sol";
+} from "../../src/Constants.sol";
 import {
     IUniswapV2Router02
-} from "../lib/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+} from "../../lib/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {
     IUniswapV2Factory
-} from "../lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+} from "../../lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {
     IUniswapV2Pair
-} from "../lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import {IWETH} from "../src/interfaces/IWETH.sol";
+} from "../../lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import {IWETH} from "../../src/interfaces/IWETH.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import {TestToken} from "../src/TestToken.sol";
-import {UniswapV2FlashSwap} from "./../src/uniswap-v2/UniswapV2FlashSwap.sol";
-import {UniswapV2Twap} from "./../src/uniswap-v2/UniswapV2Twap.sol";
+import {TestToken} from "../../src/TestToken.sol";
+import {UniswapV2FlashSwap} from "../../src/uniswap-v2/UniswapV2FlashSwap.sol";
+import {UniswapV2Twap} from "../../src/uniswap-v2/UniswapV2Twap.sol";
 
 contract UniswapV2SwapAmountsTest is Test {
     IERC20 private constant weth = IERC20(WETH);
